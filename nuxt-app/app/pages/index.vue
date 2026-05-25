@@ -111,29 +111,31 @@ const quickChats = [
             {{ greeting }}
           </h1>
 
-          <UChatPrompt
-            v-model="input"
-            :status="loading ? 'streaming' : 'ready'"
-            :disabled="uploading"
-            class="[view-transition-name:chat-prompt]"
-            variant="subtle"
-            :ui="{ base: 'px-1.5' }"
-            @submit="onSubmit"
-          >
-            <template v-if="files.length > 0" #header>
-              <ChatFiles :files="files" @remove="removeFile" />
-            </template>
+          <PromptSuggestions v-model="input">
+            <UChatPrompt
+              v-model="input"
+              :status="loading ? 'streaming' : 'ready'"
+              :disabled="uploading"
+              class="[view-transition-name:chat-prompt]"
+              variant="subtle"
+              :ui="{ base: 'px-1.5' }"
+              @submit="onSubmit"
+            >
+              <template v-if="files.length > 0" #header>
+                <ChatFiles :files="files" @remove="removeFile" />
+              </template>
 
-            <template #footer>
-              <div class="flex items-center gap-1">
-                <ChatFileUploadButton :open="open" />
+              <template #footer>
+                <div class="flex items-center gap-1">
+                  <ChatFileUploadButton :open="open" />
 
-                <ModelSelect />
-              </div>
+                  <ModelSelect />
+                </div>
 
-              <UChatPromptSubmit color="neutral" size="sm" :disabled="uploading" />
-            </template>
-          </UChatPrompt>
+                <UChatPromptSubmit color="neutral" size="sm" :disabled="uploading" />
+              </template>
+            </UChatPrompt>
+          </PromptSuggestions>
 
           <div class="flex flex-wrap gap-2">
             <UButton
