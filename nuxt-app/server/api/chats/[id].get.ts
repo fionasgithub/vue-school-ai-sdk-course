@@ -1,16 +1,16 @@
 import { db, schema } from 'hub:db'
-import { and, asc, eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
+import { z } from 'zod'
 
 export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
 
-  const { id } = getRouterParams(event)
+  const { id } = await getValidatedRouterParams(event, z.object({
+    id: z.string()
+  }).parse)
 
   const chat = await db.query.chats.findFirst({
-    where: () => and(
-      eq(schema.chats.id, id as string),
-      eq(schema.chats.userId, session.user?.id || session.id)
-    ),
+    where: () => eq(schema.chats.id, id as string),
     with: {
       messages: {
         orderBy: () => asc(schema.messages.createdAt)
@@ -22,5 +22,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Chat not found' })
   }
 
-  return chat
+  const userId = session.user?.id || session.id
+  const isOwner = chat.userId === userId
+
+  if (chat.visibility === 'private' && !isOwner) {
+    throw createError({ statusCode: 404, statusMessage: 'Chat not found' })
+  }
+
+  const { userId: _, ...rest } = chat
+  return { ...rest, isOwner }
 })

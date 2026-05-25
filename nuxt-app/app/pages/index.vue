@@ -3,16 +3,31 @@ const input = ref('')
 const loading = ref(false)
 const chatId = crypto.randomUUID()
 
+const { user } = useUserSession()
+
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  let timeGreeting = 'Good evening'
+  if (hour < 12) timeGreeting = 'Good morning'
+  else if (hour < 18) timeGreeting = 'Good afternoon'
+
+  const name = user.value?.name?.split(' ')[0] || user.value?.username
+
+  return name ? `${timeGreeting}, ${name}` : `${timeGreeting}`
+})
+
 const {
   dropzoneRef,
-  isDragging,
+  dragging,
   open,
   files,
-  isUploading,
+  uploading,
   uploadedFiles,
   removeFile,
   clearFiles
 } = useFileUploadWithStatus(chatId)
+
+const { csrf, headerName } = useCsrf()
 
 async function createChat(prompt: string) {
   input.value = prompt
@@ -26,6 +41,7 @@ async function createChat(prompt: string) {
 
   const chat = await $fetch('/api/chats', {
     method: 'POST',
+    headers: { [headerName]: csrf },
     body: {
       id: chatId,
       message: {
@@ -83,51 +99,39 @@ const quickChats = [
     :ui="{ body: 'p-0 sm:p-0' }"
   >
     <template #header>
-      <DashboardNavbar />
+      <Navbar />
     </template>
 
     <template #body>
       <div ref="dropzoneRef" class="flex flex-1">
-        <DragDropOverlay :show="isDragging" />
+        <DragDropOverlay :show="dragging" />
 
         <UContainer class="flex-1 flex flex-col justify-center gap-4 sm:gap-6 py-8">
           <h1 class="text-3xl sm:text-4xl text-highlighted font-bold">
-            How can I help you today?
+            {{ greeting }}
           </h1>
 
           <UChatPrompt
             v-model="input"
             :status="loading ? 'streaming' : 'ready'"
-            :disabled="isUploading"
+            :disabled="uploading"
             class="[view-transition-name:chat-prompt]"
             variant="subtle"
             :ui="{ base: 'px-1.5' }"
             @submit="onSubmit"
           >
             <template v-if="files.length > 0" #header>
-              <div class="flex flex-wrap gap-2">
-                <FileAvatar
-                  v-for="fileWithStatus in files"
-                  :key="fileWithStatus.id"
-                  :name="fileWithStatus.file.name"
-                  :type="fileWithStatus.file.type"
-                  :preview-url="fileWithStatus.previewUrl"
-                  :status="fileWithStatus.status"
-                  :error="fileWithStatus.error"
-                  removable
-                  @remove="removeFile(fileWithStatus.id)"
-                />
-              </div>
+              <ChatFiles :files="files" @remove="removeFile" />
             </template>
 
             <template #footer>
               <div class="flex items-center gap-1">
-                <FileUploadButton :open="open" />
+                <ChatFileUploadButton :open="open" />
 
                 <ModelSelect />
               </div>
 
-              <UChatPromptSubmit color="neutral" size="sm" :disabled="isUploading" />
+              <UChatPromptSubmit color="neutral" size="sm" :disabled="uploading" />
             </template>
           </UChatPrompt>
 
